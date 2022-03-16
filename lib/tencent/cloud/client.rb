@@ -18,11 +18,11 @@ module Tencent
         @secret_id = secret_id
         @region = region
         @secret_key = secret_key
-        @options = options
+        @options = options.with_indifferent_access
       end
 
       def switch_to(service, host, schema: 'https')
-        Cloud.logger.debug { { schema: schema, service: service, host: host } }
+        Cloud.logger.debug { { schema: schema, service: service, host: host } } unless @options[:no_debug]
         @service = service
         @host = host
         @schema = schema
@@ -33,7 +33,7 @@ module Tencent
         Faraday.new(url: "#{schema}://#{host}") do |conn|
           conn.request :retry
           # conn.request :url_encoded
-          conn.response :logger
+          conn.response :logger unless @options[:no_debug]
           conn.response :raise_error
           conn.adapter :net_http
         end
@@ -42,7 +42,7 @@ module Tencent
       def post(body = nil, headers = nil)
         yield(self) if block_given?
         params = body.is_a?(Hash) ? MultiJson.dump(body) : body
-        Cloud.logger.debug { { body: body, headers: headers } }
+        Cloud.logger.debug { { body: body, headers: headers } } unless @options[:no_debug]
         res = connection.post('/', params, public_headers(body, headers))
         json(res.body)
       end
